@@ -1,0 +1,38 @@
+🔧 Docker Restart Policies & Their Meaning
+
+  📌 How to Set Restart Policies?
+You specify a restart policy when running a container using the --restart flag.
+
+✅ 1. Default Behavior (no)
+By default, if you don’t specify a restart policy, the container won’t restart after it stops.
+  docker run -d my_container
+
+🔹 If the container crashes or you stop it, it won’t restart automatically.
+  
+✅ 2. Always Restart the Container (always)
+🔹 When does it restart?
+Restarts even after manual stops (docker stop).
+Restarts on system reboot.
+🔹 Best for:
+Running critical services like databases, web servers (e.g., MySQL, Nginx).
+  docker run -d --restart always my_container
+
+✅ 3. Restart Only on Failure (on-failure)
+  🔹 When does it restart?
+✅ Restarts only if the container crashes (exits with a non-zero code).
+❌ Does NOT restart if you manually stop it (docker stop).
+🔹 Best for:
+Applications that may crash but should not restart after manual stops.
+Example: A server that may crash due to a temporary issue but shouldn't restart if you stop it intentionally.
+docker run -d --restart on-failure my_container
+👉 Limit the number of retries:
+ docker run -d --restart on-failure:3 my_container
+
+✅ 4. Restart Unless Stopped (unless-stopped)
+   🔹 When does it restart?
+✅ Restarts on crashes and system reboot.
+❌ Does NOT restart if you manually stopped it (docker stop).
+🔹 Best for:
+Services that should always run unless the user explicitly stops them.
+Example: A Node.js API server that you want to restart after reboots but not if you manually stopped it.
+docker run -d --restart unless-stopped my_container
