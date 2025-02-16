@@ -1,0 +1,218 @@
+what is docker?
+   Docker is an open platform for developing, shipping, and running applications. 
+   Docker enables you to separate your applications from your infrastructure so you can deliver software quickly. 
+   Docker provides the ability to package and run an application in a loosely isolated environment called a container.
+   
+Docker Architecture
+   Docker uses a client-server architecture. The Docker client talks to the Docker daemon, which does the heavy lifting of building, 
+   running, and distributing your Docker containers. 
+Docker client
+   The Docker client (docker) is the primary way that many Docker users interact with Docker.
+    When you use commands such as docker run, the client sends these commands to dockerd, which carries them out.
+    The docker command uses the Docker API. 
+Docker daemon
+    The Docker daemon (dockerd) listens for Docker API requests and manages Docker objects such as images, containers, networks, and volumes.
+Docker Image
+   An image is a read-only template with instructions for creating a Docker container.
+Docker container
+   A container is a runnable instance of an image. You can create, start, stop, move, or delete a container using the Docker API or CLI.
+   
+-: docker pull centos   => to pull the image
+-: docker run -it --name <container-name> centos /bin/bash  => to create the container from centos image
+-: docker ps  => to list the active containers
+-: docker ps -a  => to list the active and passive containers
+-: docker restart <container-id/name>  => to restart the container
+-: docker exec -it <container-id> /bin/bash  => to log in to the container
+-: docker commit <container-id> "<image-name>"  => to create the image form container
+-: docker build -f "<image-name>" .  => to create an image from dockerfile
+
+
+Dockerfile:-
+FROM centos
+RUN yum install telnet -y && useradd anil  => to run the command inside the container
+ENV MYCOURSE=DevOps  => to export the env variables
+ADD mytarfile.tar /root/  => untar and copy the file
+COPY mytarfile.tr /root/ => only copy the file
+USER anil  => run an image with the user anil
+EXPOSE 80  => to expose the container on port 80 
+WORKDIR /root/mydir  => to specify the working dir in container
+ENTRYPOINT ["/bin/bash", "/tmp/script1.sh"]  
+CMD ["/bin/bash", "/tmp/script1.sh"]
+-: CMD & ENTRYPOINT { "specifies the instruction that is to be executed when a Docker container starts. 
+This CMD command is not really necessary for the container to work, can override the instructions 
+as the echo command can be called in a RUN statement as well. 
+The main purpose of the CMD command is to launch the software required in a container." }
+-: ENTRYPOINT can not change execution of container, can not change the instructions and can append 
+-: RUN - When you use a RUN command in your dockerfile, it always creates a new intermediate image layer on top of the previous ones.
+-: CMD - A CMD command is used to set a default command that gets executed once you run the Docker Container.
+         In case you provide a command with the Docker run command, the CMD arguments get ignored from the dockerfile.
+         In the case of multiple CMD commands, only the last one gets executed
+
+-: docker run mydockerfile:cmd /bin/bash /tmp/script1.sh
+-: docker run mydockerfile:entrypoint /bin/bash /tmp/script1.sh
+ 
+{ docker volumes }
+ - vgcreate myvg /dev/xvdf
+ - lvcreate -L +4G -n mylv myvg
+ - mkfs.ext4 /dev/myvg/mylv
+ - mount -t ext4 /dev/myvg/mylv/ /mydocdata/
+ -: docker volume create my_data
+ -: docker volume inspect my_data  (to check the where the volume storing information_
+ -: docker run -it --name <container-name> -v /mydocdata/:/myapp centos /bin/bash  => to attach volume to the container
+ -: docker run -v data_volume:/var/lib/mysql mysql  => to mount the volume to the container (/var/lib/mysql default folder to mount the volume)
+ -: docker run -v /data/mysql:/var/lib/mysql mysql  => ( bind mount will mount the directory )
+ -: docker volume rm myvol  => ( to remove volume )
+    - When you use a bind mount, a file or directory on the host machine is mounted into a container. 
+    - The file or directory is referenced by its absolute path on the host machine.
+    - By contrast, when you use a volume, a new directory is created within Docker’s storage directory on the host machine, 
+      and Docker manages that directory’s contents.
+    - The file or directory does not need to exist on the Docker host already. It is created on demand if it does not yet exist. 
+    
+ -: docker run --mount type=bind,source=/data/mysql,target=/var/lib/mysql mysql
+ -: docker volume prune  => to remove all the volumes which are not attached to the containers
+ -: man docker-run  => manual page to refer t--subnet=10.1.0.0/16 --ip-range=10.1.4.0/24 --gateway=10.1.0.1 anil-network  => to create the network
+ { docker network type }
+ -  bridge
+ -  host
+ -  none
+ 
+ -: docker network create --driver=bridge anil_network
+ -: docker run -itd --name network1 --net  <network-name> centos /bin/bash  => to create the container with the specified network
+ -: docker run -itd --name network1 --net  <network-name> --ip <ip-addr> centos /bin/bash  ==> to create the container with the specified IP\
+ -: docker network connect multi-host-network container1
+ -: docker logs mycont1  => to check the container logs
+ -: docker stats  => to check the memory and CPU utilization of container
+ -: docker ps -q  => to list out the container id's
+ -: docker rm -f <container-name>  => to remove container
+ -: docker rm -f$(docker ps -q)  => to delete all the containers
+ -: docker network connect	=> Connect a container to a network
+ -: docker network create	=> Create a network
+ -: docker network disconnect	=> Disconnect a container from a network
+ -: docker network inspect	=> Display detailed information on one or more networks
+ -: docker network ls	=> List networks
+ -: docker network prune => Remove all unused networks
+ -: docker network rm	=> Remove one or more networks
+ 
+ <== script to delete the docker images ==>
+ for image in $(docker images|grep -v -e "centos\|REPOSITORY"|awk '{print $3}')
+ do ocker rmi -f $image
+ done
+ 
+  - How to take up the backup of docker image?
+    - docker save -o myimage.tar centos  => save the image in the form of tar file
+    - docker load -i myimage.tar  => load the image through tar file
+ 
+ -: docker tag centos:7 anil3078/centos:7  => to tag the docker image, its like a alias to the image
+ -  How to pull docker image from private registery?
+    - log in the docker hub
+    - docker pull <image-name>
+ -  How to push image to the private repository?
+    - need to add the collaborators(user id) in collaborators section
+    - images can be shared accross collaborators
+    - first need to tag the image before push into the repo
+    -: docker tag centos:7 anil3078/centos:7
+    -  docker push <image-name> 
+ -  Tag an image for a private repository
+    - To push an image to a private registry and not the central Docker registry you must tag it with the registry hostname and port (if needed).
+    $ docker tag 0e5574283393 myregistryhost:5000/fedora/httpd:version1.0
+ 
+ -: docker run -d -p 8080:80 --name httpd-container httpd  => mapping the port to the container, 8080 is the host machine and 80 is the container port,
+      container port is used only to communicate internally
+      
+ -: docker policies
+    no - Do not automatically restart the container. (the default)
+    on-failure - Restart the container if it exits due to an error, which manifests as a non-zero exit code. 
+                 optionally, limit the number of times the Docker daemon attempts to restart the container using the :max-retries option.
+    always - Always restart the container if it stops. If it is manually stopped, it is restarted only when Docker daemon restarts or 
+             the container itself is manually restarted. 
+    unless-stopped - Similar to always, except that when the container is stopped (manually or otherwise),
+                      it is not restarted even after Docker daemon restarts.
+                      
+ -: docker run -d --restart unless-stopped redis  => to update the restart policy on container
+ 
+ Docker multistage build:- 
+   - One of the most challenging things about building images is keeping the image size down. 
+   - Each RUN, COPY, and ADD instruction in the Dockerfile adds a layer to the image, and you 
+     need to remember to clean up any artifacts you don’t need before moving on to the next layer.
+   - With multi-stage builds, you use multiple FROM statements in your Dockerfile. Each FROM instruction can use a different base, 
+     and each of them begins a new stage of the build. 
+   - You can selectively copy artifacts from one stage to another, leaving behind everything you don’t want in the final image. 
+   
+FROM golang:1.16
+WORKDIR /go/src/github.com/alexellis/href-counter/
+RUN go get -d -v golang.org/x/net/html  
+COPY app.go ./
+RUN CGO_ENABLED=0 go build -a -installsuffix cgo -o app .
+
+FROM alpine:latest  
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=0 /go/src/github.com/alexellis/href-counter/app ./
+CMD ["./app"]
+ 
+ Docker interview questions:-
+  
+ what is the difference between Dockerfile add docker compose file?
+   Dockerfile:- A Dockerfile is the simple text file that contains the command a user could call to assemble an image.
+   Docker compose file:- Docker compose is a tool is used to run multiple containers as a single service.
+      - For example, suppose you had an application which required NGNIX and MySQL, you could create one file
+      - which would start both the containers as a service without the need to start each one separately.
+      
+ How do we run NGINX webserver on localhost:8088 using a bridge network?
+   - Bridge network is the default network on docker
+   - $ docker run -it -d -p 8088:80 --name web_server nginx
+   
+ Explain how to make contaier volume persist and how do we mount the volume on the localhost "/root/nginx" directory? not in th default directory "/var/lib/volumes"
+   - $ docker run --mount type=bind,source=/root/nginx, target=/var/lib/mysql mysql
+   
+ How to check details about any image?
+   - $ docker inspect <imagename/imageid>
+   
+ How to check details about each layer in a docker image like size, task done, timestamp?
+  - $ docker history <imageid> 
+  
+ How to run container interactive mode and daemon mode?
+   $ docker run -itd --name test1 alpine
+   
+ How to check details about a container ?
+  $ docker inspect <containername/id>
+  
+How to check logs of a containner ?
+  $ docker logs <container/id> 
+  
+How to create the own registry in docker ?
+ $ docker run -d -p 5000:5000 --name registry registry:2
+ $ docker pull ubuntu
+ $ docker image tag ubuntu localhost:5000/myfirstimage
+ $ docker push localhost:5000/myfirstimage
+   
+What are the reasons if container is getting killed or terminated ?
+   - You run a container, which runs a shell script to perform some tasks. When the shell script completes, 
+     the container will exit, because there’s nothing left for the container to run.
+     
+   - You’re running a shell in a container, but you haven’t assigned a terminal, If you’re running a container with a shell (like bash) as the default command, 
+   - then the container will exit immediately if you haven’t attached an interactive terminal. 
+   -  You can stop this by adding --interactive --tty (or just -it) to your docker run ... command, which will let you type commands into the shell.
+   
+   - The important line there is "OOMKilled" which will be true if you exceed the container memory limits and Docker kills your app.
+   - This only indicates if docker itself kills your process, and requires that you have set a memory limit on your container. 
+   - Outside of docker, the Linux kernel can kill your process if the host itself runs out of memory.
+ 
+ How to check th container logs ?
+   - sudo docker container logs [option] container_id
+   
+ How to update the docker container ?
+   - docker update --cpu-shares 512 -m 300M abebf7571666 
+   - docker update --restart=on-failure:3 abebf7571666
+   
+ How to updated docker container with new image ?
+   - pull the latest image and launch container out of it and removed existing container
+
+How to copy files from host to Docker container?
+   $ docker cp /opt/file.txt <containerid>:/usr/file.txt
+
+How to copy image from one host to another host?
+   $ docker save -o myimage.tar alpine
+   $ scp myimage.tar user@localhost:~/
+   - login to remote host and load the image
+   $ docker load -i myimage.tar 
