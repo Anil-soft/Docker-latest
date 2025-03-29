@@ -1,6 +1,8 @@
 🛠 Docker Volumes - A Complete Guide
 🔍 Introduction to Docker Volumes
-Docker volumes are the preferred method for persisting data in Docker containers. Since containers are ephemeral, any data stored inside them is lost when the container is removed. Volumes allow data to persist beyond the lifecycle of a container.
+Docker volumes are the preferred method for persisting data in Docker containers. Since containers are ephemeral, 
+any data stored inside them is lost when the container is removed. Volumes allow data to persist beyond the lifecycle 
+of a container.
 
 🔧 Types of Docker Volumes
 
