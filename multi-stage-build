@@ -1,0 +1,148 @@
+What is Docker Multi-Stage Build?
+Docker Multi-Stage Build is a technique that helps reduce the final image size by using multiple FROM statements in a Dockerfile, where:
+
+The first stage contains all the dependencies required to build the application.
+The later stage(s) copy only the necessary artifacts (e.g., compiled binary) from the first stage, avoiding unnecessary files in the final image.
+This approach is particularly useful when:
+Building large applications with heavy dependencies (e.g., Golang, Java, C++).
+Creating small, production-ready images.
+Improving security by removing build tools from the final image.
+Explanation of the Multi-Stage Build You Provided
+
+# Stage 1: Build Stage
+FROM ubuntu AS build
+RUN apt-get update && apt-get install -y golang-go
+ENV GO11MODULE=off
+COPY . .
+RUN CGO_ENABLE=0 go build -o /app .
+
+# Stage 2: Production Stage
+FROM scratch
+COPY --from=build /app /app
+ENTRYPOINT ["/app"]
+
+Stage 1: Build Stage
+
+FROM ubuntu AS build
+
+Uses ubuntu as the base image for the build stage.
+The AS build part names this stage so we can reference it later.
+
+RUN apt-get update && apt-get install -y golang-go
+
+Updates package lists (apt-get update).
+Installs Golang compiler (golang-go), which is needed to compile the Go application.
+
+ENV GO11MODULE=off
+
+Sets an environment variable to disable Go modules.
+
+COPY . .
+
+Copies the application source code into the container.
+
+RUN CGO_ENABLE=0 go build -o /app .
+
+Compiles the Go application.
+
+The -o /app flag outputs the compiled binary to /app.
+
+CGO_ENABLE=0 ensures the build is fully static, so it doesn't rely on shared libraries.
+
+Stage 2: Production Stage
+
+FROM scratch
+
+Uses scratch, which is an empty base image (0 bytes).
+It contains no OS, no libraries, and no shell, making it the smallest possible container.
+
+COPY --from=build /app /app
+
+Copies the compiled binary /app from the build stage into this minimal image.
+
+ENTRYPOINT ["/app"]
+
+Sets /app as the entrypoint, so the container runs the compiled binary when started.
+
+Why Use Multi-Stage Build Here?
+Reduces Image Size
+  The first stage (Ubuntu-based) is large (~100MB+).
+  The second stage (scratch) is 0 bytes, containing only the compiled binary.
+  The final image is tiny (~10MB or less).
+
+Improves Security
+  No compilers, package managers, or extra dependencies in the final image.
+  Attackers can't exploit tools like bash or apt-get.
+  Enhances Performance
+  A smaller image leads to faster deployments and lower memory usage.
+
+Disadvantages of Single-Stage Build in Docker
+A single-stage build means using only one FROM instruction in the Dockerfile, which results in a larger, 
+less efficient image. 
+
+Here are the key disadvantages:
+  1. Large Image Size
+  The final image contains all build dependencies, compilers, libraries, and tools, even if they are not needed at runtime.
+  Example: If you build a Go application in an Ubuntu container, the image includes Go, apt-get, shell utilities, and more.
+🚨 Problem:
+Larger images take longer to pull and push, increasing deployment times.
+
+2. Security Risks
+Since the final image contains unnecessary tools and libraries, it increases the attack surface.
+Attackers can exploit tools like:
+bash
+wget
+curl
+apt-get
+
+🚨 Problem:
+More tools increase security vulnerabilities and make the container less secure.
+
+3. Slower Build and Deployment
+Since the image contains extra packages and dependencies, building, transferring, and running the container takes longer.
+🚨 Problem:
+Higher resource consumption (CPU, memory, storage).
+Slower CI/CD pipelines due to large image transfers.
+
+4. Inefficient Caching
+Docker caches layers for efficiency.
+In a single-stage build, if one dependency changes, Docker may rebuild the entire image.
+
+🚨 Problem:
+Longer build times because everything is rebuilt.
+No separation between build and runtime dependencies.
+
+5. Harder to Maintain
+The Dockerfile grows large and messy with:
+Build dependencies
+Unnecessary tools
+Mixed concerns (build + runtime)
+
+🚨 Problem:
+Difficult to modify, debug, or optimize the build process.
+
+Dockerfile for Multi-Stage Build (Java + Maven)
+# Stage 1: Build Stage
+FROM maven:3.8.5-openjdk-17 AS build
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy project files
+COPY pom.xml .
+COPY src ./src
+
+# Build the application
+RUN mvn clean package -DskipTests
+
+# Stage 2: Runtime Stage
+FROM openjdk:17-jdk-slim
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy only the built JAR file from the previous stage
+COPY --from=build /app/target/*.jar app.jar
+
+# Run the application
+ENTRYPOINT ["java", "-jar", "app.jar"]
